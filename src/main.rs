@@ -1,6 +1,6 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use clap::{App, AppSettings, Arg, ArgMatches, Args, Parser, Subcommand};
-use git2::Repository;
+use git2::{BranchType, Repository};
 
 const GITHUB_URL: &str = "https://api.github.com";
 
@@ -41,10 +41,33 @@ async fn main() -> anyhow::Result<()> {
     let args = GHStackArgs::parse();
     setup_logging(&args)?;
 
-    let repo = Repository::open(".")?;
-    let head = repo.head()?;
+    let repo = Repository::discover(".").context("Couldn't find a repository")?;
 
-    println!("{:?}", head.name());
+    match args.command {
+        Commands::Log {
+            branch: branch_name,
+            base: base_name,
+        } => {
+            let base = repo
+                .find_branch(&base_name, BranchType::Local)
+                .with_context(|| format!("Couldn't find branch '{base_name}'"))?;
+            let branch = repo
+                .find_branch(&branch_name, BranchType::Local)
+                .with_context(|| format!("Couldn't find branch '{branch_name}'"))?;
+            let base_id = base
+                .get()
+                .target()
+                .ok_or_else(|| anyhow!("Couldn't find a reference for {base_name}"))?;
+            let branch_id = branch
+                .get()
+                .target()
+                .ok_or_else(|| anyhow!("Couldn't find a reference for {branch_name}"))?;
+
+            let merge_base = repo.merge_base(base_id, branch_id);
+
+            println!("{:?} {:?}", base.get().target(), merge_base);
+        }
+    }
 
     Ok(())
 }
