@@ -19,10 +19,10 @@ check:
 	cargo check
 
 build:
-	cross build
+	cargo build
 
 release:
-	cross build --release
+	cargo build --release
 
 test:
 	cargo test

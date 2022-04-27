@@ -15,6 +15,7 @@ lto = true
 [dependencies]
 log = "0.4"
 env_logger = "0.9"
+#lazy_static = "1.4"
 
 # Error handling
 anyhow = "1.0"
@@ -23,9 +24,16 @@ anyhow = "1.0"
 clap = { version =  "3.1", features = ["derive", "env"] }
 
 # Async Runtime
-tokio = { version = "1.17", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.17", features = ["macros", "process", "rt-multi-thread"] }
+
+colored = "2"
 
 git2 = "0.14"
+git2_credentials = "0.8"
+whoami = "1.2"
+
+[dev-dependencies]
+tempfile = "3.3"
 
 ## Console Styling
 #console = "0.15"

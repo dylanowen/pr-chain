@@ -1,8 +1,15 @@
-use anyhow::{anyhow, Context};
-use clap::{App, AppSettings, Arg, ArgMatches, Args, Parser, Subcommand};
-use git2::{BranchType, Repository};
+extern crate core;
 
-const GITHUB_URL: &str = "https://api.github.com";
+mod git;
+mod pr_chain;
+
+use crate::git::fetch_remotes;
+use crate::pr_chain::PrChain;
+use anyhow::Context;
+use clap::{Parser, Subcommand};
+use git2::Repository;
+
+const _GITHUB_URL: &str = "https://api.github.com";
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -32,7 +39,7 @@ enum Commands {
         #[clap(index(1))]
         branch: String,
         #[clap(long, default_value = "main")]
-        base: String,
+        trunk: String,
     },
 }
 
@@ -42,30 +49,62 @@ async fn main() -> anyhow::Result<()> {
     setup_logging(&args)?;
 
     let repo = Repository::discover(".").context("Couldn't find a repository")?;
+    fetch_remotes(&repo)?;
 
     match args.command {
         Commands::Log {
             branch: branch_name,
-            base: base_name,
+            trunk: trunk_name,
         } => {
-            let base = repo
-                .find_branch(&base_name, BranchType::Local)
-                .with_context(|| format!("Couldn't find branch '{base_name}'"))?;
-            let branch = repo
-                .find_branch(&branch_name, BranchType::Local)
-                .with_context(|| format!("Couldn't find branch '{branch_name}'"))?;
-            let base_id = base
-                .get()
-                .target()
-                .ok_or_else(|| anyhow!("Couldn't find a reference for {base_name}"))?;
-            let branch_id = branch
-                .get()
-                .target()
-                .ok_or_else(|| anyhow!("Couldn't find a reference for {branch_name}"))?;
+            PrChain::init(&repo, &branch_name, &trunk_name)?
+                .log_plan(&repo)
+                .await?;
 
-            let merge_base = repo.merge_base(base_id, branch_id);
-
-            println!("{:?} {:?}", base.get().target(), merge_base);
+            // let trunk = repo
+            //     .find_branch(&trunk_name, BranchType::Local)
+            //     .with_context(|| format!("Couldn't find branch '{trunk_name}'"))?;
+            // let branch = repo
+            //     .find_branch(&branch_name, BranchType::Local)
+            //     .with_context(|| format!("Couldn't find branch '{branch_name}'"))?;
+            // let trunk_id = trunk
+            //     .get()
+            //     .target()
+            //     .ok_or_else(|| anyhow!("Couldn't find a reference for {trunk_name}"))?;
+            // let branch_id = branch
+            //     .get()
+            //     .target()
+            //     .ok_or_else(|| anyhow!("Couldn't find a reference for {branch_name}"))?;
+            //
+            // let other_branches = repo
+            //     .branches(None)?
+            //     .into_iter()
+            //     .filter_map(|branch| branch.ok())
+            //     .filter(|(other_branch, _branch_type)| {
+            //         other_branch.get() != trunk.get() && other_branch.get() != branch.get()
+            //     })
+            //     .collect::<Vec<_>>();
+            //
+            // for (other_branch, _) in other_branches {
+            //     println!("{:?}", other_branch.name());
+            // }
+            //
+            // let merge_base = repo.merge_base(trunk_id, branch_id).with_context(|| {
+            //     format!("Couldn't find a merge base of '{branch_name}' and '{trunk_name}'")
+            // })?;
+            //
+            // git::log(&format!("{merge_base}")).await;
+            //
+            // let mut walk = repo.revwalk()?;
+            // walk.push(branch_id);
+            // walk.hide(trunk_id);
+            //
+            // let ids_to_base = walk.into_iter().collect::<Result<Vec<_>, _>>()?;
+            //
+            // for id in ids_to_base {
+            //     println!("{id:?}");
+            // }
+            //
+            // println!("{:?} {:?}", trunk.get().target(), merge_base);
         }
     }
 
