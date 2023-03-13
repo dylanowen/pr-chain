@@ -30,7 +30,7 @@ colored = "2"
 
 git2 = "0.14"
 git2_credentials = "0.8"
-whoami = "1.2"
+whoami = "1.4"
 
 [dev-dependencies]
 tempfile = "3.3"
