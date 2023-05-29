@@ -28,7 +28,7 @@ tokio = { version = "1.17", features = ["macros", "process", "rt-multi-thread"] 
 
 colored = "2"
 
-git2 = "0.14"
+git2 = "0.17"
 git2_credentials = "0.8"
 whoami = "1.2"
 
